@@ -1,5 +1,4 @@
 // uses Rawg for webscaping
-
 import java.net.*;
 import java.net.http.*;
 import java.util.*;
