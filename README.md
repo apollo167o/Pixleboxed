@@ -4,9 +4,10 @@
 
 ## Frontend Documentation
 
-Made by Juantjie
+[!NOTE]
+> Made by Juantjie
 
-## How does the Frontend Work
+### How does the Frontend Work
 
 Currently still heavily under construction however the general idea will be
 
@@ -21,7 +22,8 @@ Currently still heavily under construction however the general idea will be
 
 ## Backend Documentation
 
-Made by Neo
+[!NOTE]
+> Made by Neo
 
 ### How does the backend work
 
@@ -37,3 +39,17 @@ The backend contains a few methods, only one is public and will soon be replaced
       grabGame api = new grabGame(search, "path/to/games.json");
       api.requestCorrectGame();
       ```
+
+## Purpose of this Project
+
+This project was thought of while making [Juan-Parser](https://github.com/neo-vh/juan-parser) as a way to use the parser
+
+- meant for more learning
+- a way to have fun after making the custom json parser
+
+***
+
+[!IMPORTANT]
+this was made during exams with basically no java experience and a GUI library neither of us know
+
+**PS. Juan n klein chomma**
