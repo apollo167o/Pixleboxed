@@ -1,9 +1,7 @@
 @echo off
-javac -cp "juanparser.jar" *.java
+javac -cp "lib\juanparser.jar" grabGame.java
 if errorlevel 1 (
     echo Compile failed.
-    pause
     exit /b 1
 )
-java -cp "juanparser.jar;." program
-pause
+java -cp "lib\juanparser.jar;." grabGame
