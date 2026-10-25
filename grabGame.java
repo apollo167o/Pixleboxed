@@ -3,15 +3,18 @@ import java.io.IOException;
 import java.net.*;
 import java.net.http.*;
 import java.util.*;
+
 import java.nio.charset.*;
 import juanparser.*;
 
 public class grabGame {
 
     String game;
+    String dataPath;
 
-    grabGame(String game) {
+    grabGame(String game, String dataPath) {
         this.game = game;
+        this.dataPath = dataPath;
     }
 
     private List<?> lookupGame() { // get the results from the RAWG api
@@ -71,16 +74,50 @@ public class grabGame {
 
     } 
 
-    public void requestCorrectGame() { // temporary gui will replace this
+    private Map<String, Object> appendToCurrent(Map<String, Object> gameMap) {
+
+        Map<String, Object> appendedMap = gameMap;
+        Map<String, Object> currentMap = new HashMap<>();
+
+
+        JsonRead reader = new JsonRead(dataPath, true);
+        currentMap = reader.fromJson();
+
+        for (Map.Entry<String, Object> entry : currentMap.entrySet()) {
+
+            gameMap.put(entry.getKey(), entry.getValue());
+
+        }
+
+        return appendedMap;
+
+    }
+
+    public void requestCorrectGame() { // temporary, gui will replace this needed for testing though
 
         List<GameChoice> choices = sift();
 
         for (int i = 0; i < choices.size(); i++) {
 
-            System.out.println(String.format("%d -> %s", i, choices.get(i).name));
+            System.out.println(String.format("%d -> %s", i + 1, choices.get(i).name));
 
         }
 
+        System.out.println("\nPlease Select the correct game from the list above"); // just some readability and instructions
+
+        Scanner sc = new Scanner(System.in);
+        GameChoice correctEntry = choices.get(Integer.valueOf(sc.nextLine()) - 1);
+
+        sc.close();
+
+        HashMap<String, Object> gameMap = new HashMap<>();
+        gameMap.put(correctEntry.name, correctEntry.slug);
+
+        try {
+            JsonWrite.writes(new HashMap<>(appendToCurrent(gameMap)), dataPath);
+        } catch (IOException e) {
+            System.out.println(String.format("Unable to write to json due to %s", e));
+        }
 
 
     }
