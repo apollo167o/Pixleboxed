@@ -4,7 +4,7 @@
 
 ## Frontend Documentation
 
-[!NOTE]
+> [!NOTE]
 > Made by Juantjie
 
 ### How does the Frontend Work
@@ -22,7 +22,7 @@ Currently still heavily under construction however the general idea will be
 
 ## Backend Documentation
 
-[!NOTE]
+> [!NOTE]
 > Made by Neo
 
 ### How does the backend work
@@ -49,7 +49,7 @@ This project was thought of while making [Juan-Parser](https://github.com/neo-vh
 
 ***
 
-[!IMPORTANT]
-this was made during exams with basically no java experience and a GUI library neither of us know
+> [!IMPORTANT]
+> this was made during exams with basically no java experience and a GUI library neither of us know
 
 **PS. Juan n klein chomma**
