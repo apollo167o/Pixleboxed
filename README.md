@@ -52,4 +52,4 @@ This project was thought of while making [Juan-Parser](https://github.com/neo-vh
 > [!IMPORTANT]
 > this was made during exams with basically no java experience and a GUI library neither of us know
 
-**PS. Juan n klein chomma**
+**PS. Juan n klein tsundere**
