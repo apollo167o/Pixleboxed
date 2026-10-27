@@ -9,21 +9,21 @@ import juanparser.*;
 
 public class grabGame {
 
-    String game;
-    String dataPath;
+    final String JSON_PATH = "games.json";
+    final String API_KEY = System.getenv("RAWG_API_KEY");
+    final String NAME_URL = "https://api.rawg.io/api/games?search=%s&key=%s&page_size=20";
+    final String SLUG_URL = "https://api.rawg.io/api/games/%s?key=%s";
+    final String game;
 
-    grabGame(String game, String dataPath) {
+    public record Game(String name, String slug) {};
+
+    public grabGame(String game) {
         this.game = game;
-        this.dataPath = dataPath;
     }
 
-    private List<?> lookupGame() { // get the results from the RAWG api
+    private Map<String, Object> sendReq(String unformatted_url, Object[] args) {
 
-        String API_KEY = System.getenv("RAWG_API_KEY"); // set api as environment variable
-        String search = URLEncoder.encode(game, StandardCharsets.UTF_8)
-            .replace("+", "%20");
-
-        String url = String.format("https://api.rawg.io/api/games?search=%s&key=%s&page_size=10", search, URLEncoder.encode(API_KEY, StandardCharsets.UTF_8));
+        String url = String.format(unformatted_url, args); // Excpected formatted args
 
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
@@ -33,94 +33,121 @@ public class grabGame {
 
         try {
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(
+                request,
+                HttpResponse.BodyHandlers.ofString()
+            );
 
-                
             JsonRead reader = new JsonRead(response.body(), false);
-            Map<String, Object> data = new HashMap<>(reader.fromJson());
-            Object results = data.get("results");
-            if (results instanceof List<?> list) return list;
-            return List.of(); // no results returned or error from api
+            return reader.fromJson();
 
         } catch (IOException | InterruptedException e) {
 
-            System.out.println(String.format("Error %s Encountered while sending API request", e));
-            return List.of();
+            System.out.println(String.format("Error %s Occured", e));
+            return Map.of();
 
         }
 
+
+
     }
 
-    public record GameChoice(String name, String slug) {} // class for storing names and slugs
+    public List<Game> fetchPossibleSlugs() {
 
-    private List<GameChoice> sift() { // sift through results to get the usable oness
-        List<?> results = lookupGame();
-        List<GameChoice> choices = new ArrayList<>();
+        Object[] args = {
+            URLEncoder.encode(game, StandardCharsets.UTF_8).replace("+", "%20"),
+            URLEncoder.encode(API_KEY, StandardCharsets.UTF_8)
+        };
+
+        Object rawResults = sendReq(NAME_URL, args).get("results");
+        List<Game> possible = new ArrayList<>();
+
+        if (!(rawResults instanceof List<?> results)) {
+            return List.of();
+        }
 
         for (Object item : results) {
 
-            if(!(item instanceof Map<?, ?> game )) continue;
+            if (!(item instanceof Map<?, ?> gameMap)) continue;
 
-            Object name = game.get("name");
-            Object slug = game.get("slug");
-
+            String name = gameMap.get("name").toString();
+            String slug = gameMap.get("slug").toString();
 
             if (name == null || slug == null) continue;
 
-            choices.add(new GameChoice(name.toString(), slug.toString()));
-        }
-
-        return choices;
-
-    } 
-
-    private Map<String, Object> appendToCurrent(Map<String, Object> gameMap) {
-
-        Map<String, Object> appendedMap = gameMap;
-        Map<String, Object> currentMap = new HashMap<>();
-
-
-        JsonRead reader = new JsonRead(dataPath, true);
-        currentMap = reader.fromJson();
-
-        for (Map.Entry<String, Object> entry : currentMap.entrySet()) {
-
-            gameMap.put(entry.getKey(), entry.getValue());
+            possible.add(new Game(name, slug));
 
         }
 
-        return appendedMap;
+        return possible;
 
     }
 
-    public void requestCorrectGame() { // temporary, gui will replace this needed for testing though
+    private void appendToFile(String slug, Map<String, Object> content) {
 
-        List<GameChoice> choices = sift();
+        JsonRead reader = new JsonRead(JSON_PATH, true);
+        Map<String, Object> old = new HashMap<>(reader.fromJson());
 
-        for (int i = 0; i < choices.size(); i++) {
-
-            System.out.println(String.format("%d -> %s", i + 1, choices.get(i).name));
-
-        }
-
-        System.out.println("\nPlease Select the correct game from the list above"); // just some readability and instructions
-
-        Scanner sc = new Scanner(System.in);
-        GameChoice correctEntry = choices.get(Integer.valueOf(sc.nextLine()) - 1);
-
-        sc.close();
-
-        HashMap<String, Object> gameMap = new HashMap<>();
-        gameMap.put(correctEntry.name, correctEntry.slug);
+        old.put(slug, content);
 
         try {
-            JsonWrite.writes(new HashMap<>(appendToCurrent(gameMap)), dataPath);
+            JsonWrite.writes(new HashMap<>(old), JSON_PATH);
         } catch (IOException e) {
-            System.out.println(String.format("Unable to write to json due to %s", e));
+            System.out.println(String.format("Failed to write to %s", JSON_PATH));
+        }
+    }
+
+    private void createEntry(String slug) {
+
+        Object[] args = {
+            URLEncoder.encode(slug, StandardCharsets.UTF_8),
+            URLEncoder.encode(API_KEY, StandardCharsets.UTF_8)
+        };
+
+        Map<String, Object> data = sendReq(SLUG_URL, args);
+        Map<String, Object> newContent = new HashMap<>();
+        List<String> genres = new ArrayList<>();
+
+        newContent.put("name", data.get("name"));
+        newContent.put("image", data.get("background_image"));
+        newContent.put("description", data.get("description_raw"));
+
+        if (!(data.get("genres") instanceof List<?> genreList)) return; 
+        
+        for (Object item : genreList) {
+
+            if (!(item instanceof Map<?, ?> curGenre)) continue;
+
+            genres.add(curGenre.get("name").toString());
+
+
         }
 
+        newContent.put("genres", genres);
+
+        appendToFile(slug, newContent);
 
     }
+
+    public void addEntry() {
+
+        List<Game> possible = fetchPossibleSlugs();
+
+        // get correct slug (will likely be replaced by GUI later on)
+        for (int i = 0; i < possible.size(); i++) {
+
+            System.out.println(String.format("%d | %s", i+1, possible.get(i).name));
+
+        }
+
+        Scanner sc = new Scanner(System.in);
+        int correctIndex = Integer.valueOf(sc.nextLine()) - 1;
+        sc.close();
+        String correctSlug = possible.get(correctIndex).slug;
+
+        createEntry(correctSlug);
+    }
+
 
 
 }
